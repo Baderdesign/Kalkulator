@@ -1021,9 +1021,10 @@ function cloudConnect(){
   });
   cloudRender();
 }
-async function pullSettings(){
+async function pullSettings(silent){
   if(!sb||!cuser) return;
-  cmsg('Lade Daten aus der Cloud …');
+  if(setTimer){clearTimeout(setTimer);setTimer=null;await pushSettings();}
+  if(!silent) cmsg('Lade Daten aus der Cloud …');
   const {data,error}=await sb.from('kalk_einstellungen').select('data').eq('user_id',cuser.id).maybeSingle();
   if(error){cmsg('Laden fehlgeschlagen: '+errText(error)+' Ist das SQL-Setup in Supabase ausgeführt?',true);return;}
   if(data&&data.data){
@@ -1032,9 +1033,10 @@ async function pullSettings(){
     if(d.prices) state.prices=Object.assign(state.prices,d.prices);
     if(d.d3rates&&state.d3) state.d3.rates=Object.assign(state.d3.rates,d.d3rates);
     if(d.nrO) state.doc.nrO=d.nrO; if(d.nrR) state.doc.nrR=d.nrR;
+    const changed=JSON.stringify(settingsPayload())!==lastSet;
     lastSet=JSON.stringify(settingsPayload());
-    quiet=true; try{init();init3d();}finally{quiet=false;} save();
-    cmsg('Daten aus der Cloud geladen.');
+    if(changed||!silent){quiet=true; try{init();init3d();}finally{quiet=false;} save();}
+    if(!silent) cmsg('Daten aus der Cloud geladen.');
   }else{
     await pushSettings(); cmsg('Erste Anmeldung: Firmendaten und Preise in die Cloud gespeichert.');
   }
@@ -1048,9 +1050,9 @@ async function pushSettings(){
 function cloudOnSave(){
   if(!CLOUD||!sb||!cuser) return;
   const j=JSON.stringify(settingsPayload());
-  clearTimeout(setTimer);
+  clearTimeout(setTimer); setTimer=null;
   if(j===lastSet) return;
-  setTimer=setTimeout(pushSettings,1500);
+  setTimer=setTimeout(()=>{setTimer=null;pushSettings();},1500);
 }
 async function cloudArchive(type,nr){
   if(!CLOUD||!sb||!cuser) return;
@@ -1162,7 +1164,12 @@ if(CLOUD){
     if(!data.session) cmsg('Konto erstellt. Bestätige die E-Mail über den Link, dann hier anmelden.');
   });
   $('c-out').addEventListener('click',async()=>{if(sb) await sb.auth.signOut(); cmsg('Abgemeldet. Die Daten bleiben in der Cloud.');});
-  $('c-sync').addEventListener('click',async()=>{clearTimeout(setTimer);await pushSettings();await loadArchive();if(!$('c-msg').classList.contains('err'))cmsg('Synchronisiert.');});
+  $('c-sync').addEventListener('click',async()=>{await pullSettings();await loadArchive();if(!$('c-msg').classList.contains('err'))cmsg('Synchronisiert.');});
+  // Beim Zurückkehren in die App: neueste Daten vom anderen Gerät holen
+  let lastPull=0;
+  const refresh=()=>{if(document.visibilityState!=='visible'||!sb||!cuser) return; if(Date.now()-lastPull<5000) return; lastPull=Date.now(); pullSettings(true).then(()=>{if(!$('view-archiv').hidden) loadArchive();});};
+  document.addEventListener('visibilitychange',refresh);
+  window.addEventListener('focus',refresh);
 }
 
 init();
