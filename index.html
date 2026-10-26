@@ -188,6 +188,28 @@ html.cloud .tabs button.cloudonly{display:block}
 .cstate{display:grid;gap:12px;padding:16px 18px 18px}
 .cstate .row2{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 @media (max-width:760px){.arow{grid-template-columns:minmax(0,1fr) auto}.arow .awho{grid-column:1 / -1;grid-row:2}.arow .astat{grid-column:1;grid-row:3}.arow .aact{grid-column:2;grid-row:3}.arow .amt{grid-column:2;grid-row:1}.arcbar{grid-template-columns:1fr 1fr}.arcbar .q{grid-column:1 / -1}}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(10,10,12,.6);display:flex;align-items:center;justify-content:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.mbox{background:var(--surface);color:var(--fg);border-radius:14px;width:min(880px,100%);height:min(920px,100%);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.mhead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.mhead h2{font-family:var(--f-display);font-weight:700;font-size:19px;margin:0}
+.mhead h2 small{display:block;font-family:var(--f-body);font-weight:400;font-size:12.5px;color:var(--muted);margin-top:2px}
+.mfmt{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:12px 18px 4px}
+.mfmt button{font:600 13.5px var(--f-body);padding:9px 6px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.mfmt button small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+.mfmt button[aria-pressed="true"]{border-color:var(--resin);background:var(--resin-soft);color:var(--fg)}
+.mfmt button[disabled]{opacity:.45;cursor:not-allowed}
+.mnote{margin:6px 18px 10px;font-size:12.5px;color:var(--muted)}
+.mprev{flex:1;min-height:0;overflow:auto;background:var(--sunk);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px}
+.mprev canvas{display:block;width:100%;height:auto;margin:0 auto 14px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.mprev .ptable{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.mprev table{border-collapse:collapse;font-size:13px;min-width:100%}
+.mprev td,.mprev th{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mprev th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.mprev .loading{color:var(--muted);padding:30px 0;text-align:center}
+.mfoot{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px;padding:12px 18px}
+.mfoot .toast{margin-right:auto;flex:1 1 200px}
+@media (max-width:560px){.modal{padding:0}.mbox{border-radius:0;height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}.mfmt{grid-template-columns:repeat(2,minmax(0,1fr))}.mfoot .btn{flex:1}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -279,8 +301,8 @@ html.cloud .tabs button.cloudonly{display:block}
           <div class="check"><input type="checkbox" id="round5" checked><label for="round5">Total auf 5 Rappen runden</label></div>
           <div class="check"><input type="checkbox" id="einr" checked><label for="einr">Gewinn in die Ansätze einrechnen (Kunde sieht keinen Gewinn-Posten)</label></div>
           <div class="docbtns">
-            <button class="btn primary" id="pdfO" type="button">Offerte (PDF)</button>
-            <button class="btn primary" id="pdfR" type="button">Rechnung (PDF)</button>
+            <button class="btn primary" id="pdfO" type="button">Offerte</button>
+            <button class="btn primary" id="pdfR" type="button">Rechnung</button>
           </div>
           <button class="btn" id="copy" type="button">Als Text kopieren</button>
           <div class="toast" id="toast" aria-live="polite"></div>
@@ -420,6 +442,25 @@ html.cloud .tabs button.cloudonly{display:block}
   </div>
 </div>
 
+<div class="modal" id="docModal" hidden role="dialog" aria-modal="true" aria-labelledby="dm-title">
+  <div class="mbox">
+    <div class="mhead"><h2 id="dm-title">Dokument</h2><button class="iconbtn" type="button" id="dm-close" aria-label="Schliessen">×</button></div>
+    <div class="mfmt" role="group" aria-label="Format">
+      <button type="button" data-fmt="pdf" aria-pressed="true">PDF<small>für Kunden</small></button>
+      <button type="button" data-fmt="xlsx" aria-pressed="false">Excel<small>.xlsx</small></button>
+      <button type="button" data-fmt="bexio" aria-pressed="false">bexio<small>Buchung .csv</small></button>
+      <button type="button" data-fmt="banana" aria-pressed="false">Banana<small>Buchung .txt</small></button>
+    </div>
+    <p class="mnote" id="dm-note"></p>
+    <div class="mprev" id="dm-prev"><p class="loading">Vorschau wird erstellt …</p></div>
+    <div class="mfoot">
+      <span class="toast" id="dm-msg" aria-live="polite"></span>
+      <button class="btn" type="button" id="dm-save">Speichern</button>
+      <button class="btn primary" type="button" id="dm-share" hidden>Senden / Teilen</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.97.0"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -437,7 +478,7 @@ const DEFAULT_PRICES={
   olive:15, holz:10, epoxy:25, maschine:15, arbeit:55, laser:15, marge:30,
   g_std:{'50':4.50,'100':9.90,'150':14.90,'200':19.90,'201':19.90},
   g_vc:{'50':7.50,'100':15.00,'150':22.50,'200':29.50,'201':29.50},
-  g_zuschlag:15, svgMin:20, zahlTage:30, gueltTage:30, mwstOn:false, mwstSatz:8.1
+  g_zuschlag:15, svgMin:20, zahlTage:30, gueltTage:30, mwstOn:false, mwstSatz:8.1, kSoll:1100, kHaben:3000, bVat:''
 };
 const FR=[
   {k:'olive',   name:'Holz Olive',              pdf:'Holz Olive',           grp:'Material', unit:'g', docUnit:'kg',  per:'kg', div:1000, step:50},
@@ -571,6 +612,10 @@ function buildSettings(){
   h+=inp('p-svg','SVG / DXF Pauschale ab',p.svgMin,'CHF',1);
   h+=inp('p-guelt','Offerte gültig',p.gueltTage,'Tage',1);
   h+=inp('p-zahl','Rechnung zahlbar innert',p.zahlTage,'Tage',1);
+  h+='<h3>Buchhaltung (bexio / Banana)</h3>';
+  h+=inp('p-ksoll','Konto Soll (Debitoren)',p.kSoll,'Konto',1);
+  h+=inp('p-khaben','Konto Haben (Ertrag)',p.kHaben,'Konto',1);
+  h+=`<label>MWST-Code Banana (optional)<div class="field"><input class="t" id="p-bvat" value="${esc(p.bVat||'')}" placeholder="z. B. V81"></div></label>`;
   h+='<h3>Mehrwertsteuer</h3>';
   h+=`<label style="align-self:end"><span class="check" style="padding:8px 0"><input type="checkbox" id="p-mwstOn"${p.mwstOn?' checked':''}> MWST ausweisen</span></label>`;
   h+=inp('p-mwst','MWST-Satz',p.mwstSatz,'%',0.1);
@@ -582,8 +627,9 @@ function buildSettings(){
   bind('p-zu',v=>p.g_zuschlag=n(v)); bind('p-svg',v=>p.svgMin=n(v));
   bind('p-guelt',v=>p.gueltTage=Math.round(n(v))); bind('p-zahl',v=>p.zahlTage=Math.round(n(v)));
   bind('p-mwst',v=>p.mwstSatz=n(v));
+  bind('p-ksoll',v=>p.kSoll=Math.round(n(v))); bind('p-khaben',v=>p.kHaben=Math.round(n(v))); bind('p-bvat',v=>p.bVat=String(v).trim());
   $('p-mwstOn').addEventListener('change',e=>{p.mwstOn=e.target.checked;calc();});
-  $('resetPrices').addEventListener('click',()=>{const keep={mwstOn:p.mwstOn,mwstSatz:p.mwstSatz,zahlTage:p.zahlTage,gueltTage:p.gueltTage};state.prices=Object.assign(JSON.parse(JSON.stringify(DEFAULT_PRICES)),keep);buildSettings();buildFr();calc();toast('Preise zurückgesetzt');});
+  $('resetPrices').addEventListener('click',()=>{const keep={mwstOn:p.mwstOn,mwstSatz:p.mwstSatz,zahlTage:p.zahlTage,gueltTage:p.gueltTage,kSoll:p.kSoll,kHaben:p.kHaben,bVat:p.bVat};state.prices=Object.assign(JSON.parse(JSON.stringify(DEFAULT_PRICES)),keep);buildSettings();buildFr();calc();toast('Preise zurückgesetzt');});
 }
 
 /* ---------- Logo ---------- */
@@ -952,6 +998,165 @@ async function makePdf(type,btn){
   }catch(e){pdfError(e);}finally{btn.disabled=false;}
 }
 
+
+/* ---------- Dokument-Dialog: Vorschau, Format, Senden ---------- */
+const loadScript=src=>new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=src;sc.onload=res;sc.onerror=()=>rej(new Error('Bibliothek konnte nicht geladen werden. Internetverbindung prüfen.'));document.head.appendChild(sc);});
+let pdfjsP=null, xlsxP=null;
+const ensurePdfjs=()=>pdfjsP||(pdfjsP=loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js').then(()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}).catch(e=>{pdfjsP=null;throw e;}));
+const ensureXlsx=()=>xlsxP||(xlsxP=loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js').catch(e=>{xlsxP=null;throw e;}));
+const dmo={ctx:null,fmt:'pdf',file:null,done:false,tok:0};
+const dCH=iso=>{const d=parseD(iso);return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();};
+const isoD=iso=>/^\d{4}-\d{2}-\d{2}$/.test(iso||'')?iso:today();
+const safeName=t=>t.replace(/[\\/:*?"<>|]+/g,'').replace(/\s+/g,' ').trim();
+
+function withCtx(ctx,fn){
+  const key=ctx.type==='R'?'nrR':'nrO';
+  if(!ctx.snap){const old=state.doc[key];state.doc[key]=ctx.nr;quiet=true;try{R=buildLines();return fn();}finally{state.doc[key]=old;quiet=false;calc();}}
+  const keep=JSON.stringify(state), s=ctx.snap||{};
+  quiet=true;
+  try{
+    SNAP_KEYS.forEach(k=>{if(s[k]!==undefined) state[k]=JSON.parse(JSON.stringify(k==='prices'?Object.assign({},state.prices,s[k]):s[k]));});
+    state.doc=Object.assign({},state.doc,s.doc||{}); state.doc[key]=ctx.nr;
+    R=buildLines(); return fn();
+  }finally{state=JSON.parse(keep);quiet=false;calc();}
+}
+function bookText(t,nr){const k=state.kunde,who=(k.firma||k.kontakt||'').trim(),pr=(state.doc.projekt||'').trim();return (t==='R'?'Rechnung ':'Offerte ')+nr+(who?' '+who:'')+(pr?' – '+pr:'');}
+function buildFile(fmt,ctx){
+  return withCtx(ctx,()=>{
+    const t=ctx.type, nr=ctx.nr, k=state.kunde, d=state.doc, p=state.prices, base=(t==='R'?'Rechnung ':'Offerte ')+nr+((k.firma||k.kontakt)?' '+(k.firma||k.kontakt).trim():'');
+    if(fmt==='pdf'){const ab=buildPdf(t).output('arraybuffer');return {blob:new Blob([ab],{type:'application/pdf'}),fn:safeName(base)+'.pdf',pdf:ab};}
+    if(fmt==='xlsx'){
+      const f=state.firma, rows=[];
+      rows.push([f.name||'']);
+      rows.push([t==='R'?'Rechnung':'Offerte',nr]);
+      rows.push(['Datum',dCH(isoD(d.datum))]);
+      rows.push(['Kunde',[k.firma,k.kontakt].filter(Boolean).join(', ')]);
+      rows.push(['Adresse',[[k.strasse,k.nr].filter(Boolean).join(' '),[k.plz,k.ort].filter(Boolean).join(' ')].filter(Boolean).join(', ')]);
+      if(d.projekt) rows.push(['Projekt',d.projekt]);
+      if(t==='R'&&d.refO) rows.push(['Ihre Offerte',d.refO]);
+      rows.push([]);
+      const h0=rows.length; rows.push(['Pos.','Bezeichnung','Menge','Einheit','Ansatz CHF','Betrag CHF']);
+      R.L.forEach((x,i)=>rows.push([i+1,clean(x.txt),+x.qty.toFixed(3),x.unit,r2(x.rate),x.amt]));
+      rows.push([]);
+      rows.push(['','Zwischensumme','','','',R.netto]);
+      if(p.mwstOn) rows.push(['','MWST '+fmtQ(n(p.mwstSatz))+' %','','','',R.mwst]);
+      if(Math.abs(R.rund)>0.0001) rows.push(['','Rundung','','','',R.rund]);
+      rows.push(['','Total CHF','','','',R.total]);
+      return {rows,head:h0,fn:safeName(base)+'.xlsx',make:()=>{
+        const ws=XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols']=[{wch:12},{wch:52},{wch:9},{wch:9},{wch:12},{wch:13}];
+        Object.keys(ws).forEach(a=>{if(a[0]==='!')return;const c=XLSX.utils.decode_cell(a);if((c.c===4||c.c===5)&&c.r>h0&&typeof ws[a].v==='number') ws[a].z='#,##0.00';});
+        const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,t==='R'?'Rechnung':'Offerte');
+        return new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      }};
+    }
+    const desc=bookText(t,nr), amt=R.total.toFixed(2);
+    if(fmt==='bexio'){
+      const head=['Datum','Belegnummer','Beschreibung','Konto Soll','Konto Haben','Betrag','Währung','MWST-Satz'];
+      const row=[dCH(isoD(d.datum)),nr,desc,String(p.kSoll),String(p.kHaben),amt,'CHF',p.mwstOn?fmtQ(n(p.mwstSatz)):''];
+      const q=v=>/[;"\n]/.test(v)?'"'+String(v).replace(/"/g,'""')+'"':v;
+      const csv='﻿'+[head,row].map(r=>r.map(q).join(';')).join('\r\n')+'\r\n';
+      return {rows:[head,row],head:0,blob:new Blob([csv],{type:'text/csv'}),fn:safeName('bexio Buchung '+nr)+'.csv'};
+    }
+    if(fmt==='banana'){
+      const head=['Date','Doc','DocInvoice','Description','AccountDebit','AccountCredit','Amount','VatCode'];
+      const row=[isoD(d.datum),nr,nr,desc.replace(/\t/g,' '),String(p.kSoll),String(p.kHaben),amt,p.bVat||''];
+      const txt=[head,row].map(r=>r.join('\t')).join('\r\n')+'\r\n';
+      return {rows:[head,row],head:0,blob:new Blob([txt],{type:'text/plain'}),fn:safeName('Banana Buchung '+nr)+'.txt'};
+    }
+  });
+}
+const NOTES={
+  pdf:'So sieht das Dokument für den Kunden aus. Mit „Senden / Teilen“ geht es direkt per Mail, WhatsApp oder in Dateien.',
+  xlsx:'Excel-Datei mit allen Positionen und Summen, zum Weiterrechnen oder Ablegen.',
+  bexio:'Buchung als CSV (Debitoren an Ertrag). bexio importiert Rechnungen nicht direkt; die Datei passt für Import-Apps wie importly oder als Vorlage. Konten unter „Preise, Fristen & MWST“.',
+  banana:'Buchung für Banana: Aktionen → In Buchhaltung importieren → Buchungen → Textdatei mit Spaltenüberschrift. Konten unter „Preise, Fristen & MWST“.'
+};
+function dmMsg(m,err){const t=$('dm-msg');t.textContent=m||'';t.className='toast'+(err?' err':'');}
+function dmTitle(){const c=dmo.ctx;$('dm-title').innerHTML=(c.type==='R'?'Rechnung ':'Offerte ')+esc(c.nr||'')+'<small>'+(c.snap?'aus dem Archiv':(dmo.done?'erstellt – weitere Formate ohne neue Nummer':'Nummer wird beim ersten Speichern oder Senden vergeben'))+'</small>';}
+function tableHtml(rows,head){
+  return '<div class="ptable"><table>'+rows.map((r,i)=>{const tag=i===head?'th':'td';return '<tr>'+r.map(v=>`<${tag}>${esc(typeof v==='number'?(Number.isInteger(v)&&Math.abs(v)<1000&&i>head&&r.indexOf(v)===0?v:fmt(v)):v)}</${tag}>`).join('')+'</tr>';}).join('')+'</table></div>';
+}
+async function dmRender(){
+  const tok=++dmo.tok, box=$('dm-prev'), fmtSel=dmo.fmt;
+  dmo.file=null; $('dm-save').disabled=true; $('dm-share').disabled=true; dmMsg('');
+  document.querySelectorAll('.mfmt button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.fmt===fmtSel)));
+  $('dm-note').textContent=NOTES[fmtSel];
+  box.innerHTML='<p class="loading">Vorschau wird erstellt …</p>';
+  try{
+    if(fmtSel==='xlsx') await ensureXlsx();
+    const f=buildFile(fmtSel,dmo.ctx);
+    if(f.make) f.blob=f.make();
+    if(tok!==dmo.tok) return;
+    dmo.file=f; $('dm-save').disabled=false; $('dm-share').disabled=false;
+    if(fmtSel==='pdf'){
+      try{
+        await ensurePdfjs();
+        const pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(f.pdf.slice(0))}).promise;
+        if(tok!==dmo.tok) return;
+        box.innerHTML='';
+        const w=Math.max(260,box.clientWidth-28), dpr=Math.min(2.5,window.devicePixelRatio||1);
+        for(let i=1;i<=pdf.numPages;i++){
+          const page=await pdf.getPage(i); if(tok!==dmo.tok) return;
+          const v1=page.getViewport({scale:1}), css=Math.min(1.6,w/v1.width), vp=page.getViewport({scale:css*dpr});
+          const c=document.createElement('canvas'); c.width=Math.floor(vp.width); c.height=Math.floor(vp.height); c.style.maxWidth=Math.floor(v1.width*css)+'px';
+          box.appendChild(c); await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+        }
+      }catch(e){ if(tok===dmo.tok) box.innerHTML='<p class="loading">Vorschau nicht verfügbar ('+esc(e.message||'Fehler')+'). Das PDF lässt sich trotzdem speichern oder senden.</p>'; }
+    }else box.innerHTML=tableHtml(f.rows,f.head);
+  }catch(e){ if(tok===dmo.tok){box.innerHTML='';dmMsg('Datei konnte nicht erstellt werden: '+(e.message||e),true);} }
+}
+function openDoc(type,arch){
+  calc();
+  if(!window.jspdf||!window.qrcode){toast('PDF-Bibliothek nicht geladen. Seite neu laden und nochmals versuchen.',true);return;}
+  if(!arch&&!R.L.length){toast('Zuerst mindestens eine Position erfassen.',true);return;}
+  dmo.ctx=arch?{type,snap:arch.snap,nr:arch.nr||''}:{type,nr:state.doc[type==='R'?'nrR':'nrO']};
+  dmo.done=false; if(type!=='R'&&(dmo.fmt==='bexio'||dmo.fmt==='banana')) dmo.fmt='pdf';
+  document.querySelectorAll('.mfmt button').forEach(b=>{b.disabled=(type!=='R'&&(b.dataset.fmt==='bexio'||b.dataset.fmt==='banana'));b.title=b.disabled?'Nur für Rechnungen':'';});
+  $('dm-share').hidden=!(CLOUD&&navigator.canShare&&navigator.share);
+  $('dm-save').textContent=(CLOUD?'Speichern':'Herunterladen');
+  dmTitle(); $('docModal').hidden=false; document.body.style.overflow='hidden';
+  setTimeout(()=>$('dm-close').focus(),0);
+  dmRender();
+}
+function closeDoc(){ $('docModal').hidden=true; document.body.style.overflow=''; dmo.tok++; dmo.file=null; }
+async function saveBlob(blob,fn){
+  const dl=await getDl();
+  if(dl){await dl.save({filename:fn,data:blob});return;}
+  const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);
+}
+function dmFinish(){
+  const c=dmo.ctx;
+  if(c.snap||dmo.done) return;
+  dmo.done=true;
+  if(typeof cloudArchive==='function') cloudArchive(c.type,c.nr);
+  const key=c.type==='R'?'nrR':'nrO';
+  if(state.doc[key]===c.nr){state.doc[key]=String(state.doc[key]).replace(/(\d+)(?!.*\d)/,m=>String(+m+1).padStart(m.length,'0'));$('d-'+key).value=state.doc[key];}
+  calc(); dmTitle();
+  toast((c.type==='R'?'Rechnung ':'Offerte ')+c.nr+' erstellt. Nächste Nummer: '+state.doc[key]);
+}
+async function dmDeliver(mode){
+  const f=dmo.file; if(!f) return;
+  const btn=mode==='share'?$('dm-share'):$('dm-save'); btn.disabled=true;
+  try{
+    if(mode==='share'){const file=new File([f.blob],f.fn,{type:f.blob.type});await navigator.share({files:[file],title:f.fn});}
+    else await saveBlob(f.blob,f.fn);
+    dmFinish(); dmMsg(mode==='share'?'Gesendet / geteilt.':'Gespeichert: '+f.fn);
+  }catch(e){
+    const c=e&&(e.code||e.name);
+    if(c==='declined'||c==='AbortError') dmMsg('Abgebrochen.');
+    else if(c==='NotAllowedError') dmMsg('Teilen nicht erlaubt. Bitte nochmals tippen oder „Speichern“ verwenden.',true);
+    else dmMsg('Fehler: '+((e&&e.message)||c||'unbekannt'),true);
+  }finally{btn.disabled=false;}
+}
+document.querySelectorAll('.mfmt button').forEach(b=>b.addEventListener('click',()=>{if(b.disabled)return;dmo.fmt=b.dataset.fmt;dmRender();}));
+$('dm-close').addEventListener('click',closeDoc);
+$('docModal').addEventListener('click',e=>{if(e.target.id==='docModal') closeDoc();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('docModal').hidden) closeDoc();});
+$('dm-save').addEventListener('click',()=>dmDeliver('save'));
+$('dm-share').addEventListener('click',()=>dmDeliver('share'));
+window.__openDoc=openDoc;
+
 let tt; function toast(m,err){const t=$('toast');t.textContent=m;t.className='toast'+(err?' err':'');clearTimeout(tt);tt=setTimeout(()=>t.textContent='',4000);}
 
 /* ---------- Events ---------- */
@@ -961,8 +1166,8 @@ $('svgOn').addEventListener('change',e=>{state.svgOn=e.target.checked;calc();});
 $('svgAmt').addEventListener('input',e=>{state.svgAmt=e.target.value;calc();});
 $('round5').addEventListener('change',e=>{state.round5=e.target.checked;calc();});
 $('einr').addEventListener('change',e=>{state.einr=e.target.checked;calc();});
-$('pdfO').addEventListener('click',e=>makePdf('O',e.currentTarget));
-$('pdfR').addEventListener('click',e=>makePdf('R',e.currentTarget));
+$('pdfO').addEventListener('click',()=>openDoc('O'));
+$('pdfR').addEventListener('click',()=>openDoc('R'));
 $('resetAll').addEventListener('click',()=>{
   state.fr={olive:0,holz:0,epoxy:0,maschine:0,laser:0,arbeit:0};state.g=[];state.p=[];state.svgOn=false;state.svgAmt=state.prices.svgMin;
   state.kunde={firma:'',kontakt:'',strasse:'',nr:'',plz:'',ort:''};
@@ -1093,7 +1298,7 @@ function renderArchive(){
       <div class="awho"><b>${esc(r.kunde||'Ohne Kunde')}</b><span class="note">${esc(r.projekt||'')}</span></div>
       <div class="amt">${fmt(+r.total||0)}</div>
       <div class="field astat"><select data-act="status" aria-label="Status">${STAT[r.typ].map(([v,l])=>`<option value="${v}"${v===r.status?' selected':''}>${l}</option>`).join('')}</select></div>
-      <div class="aact"><button class="btn sm" type="button" data-act="open">Öffnen</button><button class="btn sm" type="button" data-act="pdf">PDF</button><button class="iconbtn" type="button" data-act="del" aria-label="Löschen">×</button></div>
+      <div class="aact"><button class="btn sm" type="button" data-act="open">Öffnen</button><button class="btn sm" type="button" data-act="pdf">Ansehen</button><button class="iconbtn" type="button" data-act="del" aria-label="Löschen">×</button></div>
     </div>`;}).join('');
   const offen=arc.filter(r=>r.typ==='R'&&r.status==='offen'), bez=arc.filter(r=>r.typ==='R'&&r.status==='bezahlt'), offO=arc.filter(r=>r.typ==='O'&&r.status==='offen');
   const sum=a=>a.reduce((x,r)=>x+(+r.total||0),0);
@@ -1134,7 +1339,7 @@ if(CLOUD){
     const b=e.target.closest('button[data-act]'); if(!b) return;
     const id=b.closest('.arow').dataset.id, r=arc.find(x=>x.id===id); if(!r) return;
     if(b.dataset.act==='open') openFromArchive(r);
-    if(b.dataset.act==='pdf') reprint(r,b);
+    if(b.dataset.act==='pdf') openDoc(r.typ,{snap:r.snapshot,nr:r.nr});
     if(b.dataset.act==='del'){
       if(!b.dataset.armed){b.dataset.armed='1';b.textContent='Löschen?';b.className='btn sm danger';setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent='×';b.className='iconbtn';}},3500);return;}
       const {error}=await sb.from('kalk_dokumente').delete().eq('id',id);
