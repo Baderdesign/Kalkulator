@@ -1193,7 +1193,8 @@ const CLOUD=!!window.__CLOUD;
 if(CLOUD) document.documentElement.classList.add('cloud');
 const CFG_KEY='bader-cloud-cfg';
 let sb=null, cuser=null, lastSet='', setTimer=null, arc=[];
-const cfgGet=()=>{try{return JSON.parse(localStorage.getItem(CFG_KEY))||{};}catch(e){return {};}};
+const normUrl=u=>{u=String(u||'').trim();if(!u)return '';if(!/^https?:\/\//i.test(u))u='https://'+u;u=u.replace(/[\s.,;]+$/,'');try{const x=new URL(u);return x.protocol+'//'+x.hostname.replace(/\.+$/,'')+(x.port?':'+x.port:'');}catch(e){return u;}};
+const cfgGet=()=>{let c={};try{c=JSON.parse(localStorage.getItem(CFG_KEY))||{};}catch(e){} if(c.url) c.url=normUrl(c.url); return c;};
 const cfgSet=c=>{try{localStorage.setItem(CFG_KEY,JSON.stringify(c));}catch(e){}};
 function cmsg(m,err){const t=$('c-msg');t.textContent=m||'';t.className='toast'+(err?' err':'');}
 const SNAP_KEYS=['fr','g','p','svgOn','svgAmt','round5','einr','kunde','doc','prices'];
@@ -1348,8 +1349,10 @@ if(CLOUD){
     }
   });
   $('c-save').addEventListener('click',()=>{
-    const url=$('c-url').value.trim(), key=$('c-key').value.trim();
+    const url=normUrl($('c-url').value), key=$('c-key').value.trim();
+    if(/supabase\.com/i.test(url)){cmsg('Das ist die Adresse vom Dashboard. Nötig ist die Project URL, z. B. https://abc….supabase.co (Project Settings → Data API).',true);return;}
     if(!/^https:\/\/.+/.test(url)){cmsg('Die Project URL beginnt mit https:// (Supabase → Project Settings → API).',true);return;}
+    $('c-url').value=url;
     if(key.length<20){cmsg('Bitte den Anon- oder Publishable-Key einfügen.',true);return;}
     cfgSet({url,key}); cloudConnect(); cmsg('Verbunden. Jetzt anmelden oder ein Konto erstellen.');
   });
